@@ -43,7 +43,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ### 2. 克隆项目
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/jundaix/fpga-flow.git
 cd fpga-flow
 ```
 
@@ -238,7 +238,7 @@ fpga-flow/
 如有问题或建议，请通过以下方式联系：
 
 - 提交Issue：[GitHub Issues](https://github.com/your-username/fpga-flow/issues)
-- 邮箱：your-email@example.com
+- 邮箱：jdaiuu@163.com
 
 ---
 
