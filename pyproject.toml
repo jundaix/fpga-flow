@@ -1,0 +1,11 @@
+[project]
+name = "fpga-flow"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "langchain-openai>=0.3.21",
+    "langgraph>=0.4.8",
+    "streamlit>=1.45.1",
+]
