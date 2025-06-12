@@ -16,7 +16,7 @@ wheels/
 
 # 日志文件
 *.log
-
+*.db
 # 本地配置文件（如果有敏感信息）
 conf.yaml
 workspace/

@@ -3,7 +3,6 @@
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
-
 from .types import State
 from .nodes import (
     planner_node,
@@ -11,7 +10,9 @@ from .nodes import (
     tester,
     human_feedback_node,
 )
-
+# 导入 SQLite 检查点保存器
+from langgraph.checkpoint.sqlite import SqliteSaver
+import sqlite3
 
 def _build_base_graph():
     """Build and return the base state graph with all nodes and edges."""
@@ -24,15 +25,33 @@ def _build_base_graph():
     return builder
 
 
-def build_graph_with_memory():
-    """Build and return the agent workflow graph with memory."""
-    # use persistent memory to save conversation history
-    # TODO: be compatible with SQLite / PostgreSQL
-    memory = MemorySaver()
+# def build_graph_with_memory():
+#     """Build and return the agent workflow graph with memory."""
+#     # use persistent memory to save conversation history
+#     # TODO: be compatible with SQLite / PostgreSQL
+#     memory = MemorySaver()
 
+#     # build state graph
+#     builder = _build_base_graph()
+#     return builder.compile(checkpointer=memory)
+
+def build_graph_with_memory():
+    """Build and return the agent workflow graph with SQLite persistent memory."""
+    # 使用 SQLite 数据库实现真正的持久化
+    # check_same_thread=False 是安全的，因为实现使用了锁来确保线程安全
+    conn = sqlite3.connect("fpga_workflow_checkpoints.db", check_same_thread=False)
+    memory = SqliteSaver(conn)
+    
     # build state graph
     builder = _build_base_graph()
     return builder.compile(checkpointer=memory)
+
+# def build_graph_with_memory():
+#     # 使用 SQLite 数据库持久化状态
+#     memory = SqliteSaver.from_conn_string("checkpoints.db")
+    
+#     builder = _build_base_graph()
+#     return builder.compile(checkpointer=memory)
 
 
 def build_graph():
