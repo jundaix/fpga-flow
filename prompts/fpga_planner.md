@@ -48,7 +48,7 @@ You MUST output your planning results in the following JSON format:
   "module_definition": "Complete Verilog module definition with all ports, parameters, and interface specifications",
   "requirements": "Detailed development requirements including functionality, timing, constraints, and implementation guidelines",
   "has_enough_context": true/false,
-  "additional_info_needed": "Specific questions or information needed from user (only if has_enough_context is false)"
+  "additional_info_needed": "Specific questions or information needed from user (only if has_enough_context is false) only additional_info_needed shoule generate by chinese" 
 }
 ```
 
