@@ -16,9 +16,13 @@ wheels/
 
 # 日志文件
 *.log
+vivado_log/
 
 # 本地配置文件（如果有敏感信息）
 conf.yaml
 workspace/
 # 临时文件和目录
 .ipynb_checkpoints/
+
+# 在本地的保存Vivado输出的信息
+vivado_tcl_order.txt
