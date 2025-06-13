@@ -18,6 +18,7 @@ from agents.fpga_agents import (
 )
 
 from utils.verilog_extractor import extract_verilog_code, validate_verilog_syntax, validate_verilog_logic
+from utils.vivado_operation import *
 
 from .types import State
 
@@ -41,18 +42,25 @@ def coder_node(state: State, config: RunnableConfig) -> Command[Literal["human_f
         project_name = state.get('project_name', state.get('module_name', 'unknown'))
         module_name = state.get('module_name', 'unknown')
         
-        # 创建项目目录结构: workspace/项目名/src/
-        workspace_dir = Path(__file__).parent.parent / "workspace" / project_name / "src"
-        
-        # 创建目录
+        # 定义workspace目录
+        workspace_dir = Path(__file__).parent.parent / "workspace"
+
+        # 创建项目
         try:
-            workspace_dir.mkdir(parents=True, exist_ok=True)
-            logger.info(f"Directory created: {workspace_dir}")
+            creating_result, creating_information = create_project(project_name, workspace_path=workspace_dir)
+            if creating_result:
+                logger.info(f"Project '{project_name}' created successfully.")
+            else:
+                logger.error(f"Failed to create project: {creating_information}")
         except Exception as e:
-            logger.error(f"Failed to create directory: {e}")
+            logger.error(f"Failed to creat project: {e}")
+        
+        # 在项目文件下创建源文件目录
+        source_files_dir = workspace_dir.joinpath(project_name, f"{project_name}.srcs", "sources_1", "new")
+        os.makedirs(source_files_dir, exist_ok=True)
         
         # 保存代码文件
-        code_file_path = workspace_dir / f"{module_name}.v"
+        code_file_path = source_files_dir / f"{module_name}.v"
         try:
             with open(code_file_path, 'w', encoding='utf-8') as f:
                 f.write(generated_code)
@@ -63,9 +71,19 @@ def coder_node(state: State, config: RunnableConfig) -> Command[Literal["human_f
             save_message = f"Failed to save code: {e}"
             is_valid = False
             validation_message = f"File save failed: {e}"
+        
+        # 将代码提交至 vivado 项目中
+        try:
+            adding_result, adding_message = add_files_to_project(project_name, workspace_path=workspace_dir, source_files=[str(code_file_path)])
+            if adding_result:
+                logger.info(fadding_message)
+            else:
+                logger.error(fadding_message)
+        except Exception as e:
+            logger.error(f"Failed to add sources to {project_name}: {e}")
        
-        # 然后验证语法
-        is_valid, validation_message = validate_verilog_syntax(str(code_file_path))
+        # 采用Vivado进行语法验证
+        is_valid, validation_message = validate_verilog_syntax_vivado(project_name, workspace_dir, [str(code_file_path)])
         
         if is_valid:
             logger.info(f"{validation_message}")
@@ -306,20 +324,19 @@ def tester(state: State, config: RunnableConfig) -> Command[Literal["human_feedb
         project_name = state.get('project_name', state.get('module_name', 'unknown'))
         module_name = state.get('module_name', 'unknown')
         
-        # 创建项目目录结构: workspace/项目名/test/
-        workspace_dir = Path(__file__).parent.parent / "workspace" / project_name / "test"
-        project_dir = Path(__file__).parent.parent / "workspace" / project_name
+        # 定义workspace目录
+        workspace_dir = Path(__file__).parent.parent / "workspace"
+
         # 创建目录
         try:
-            workspace_dir.mkdir(parents=True, exist_ok=True)
-            sim_dir = project_dir / "sim"
+            sim_dir = workspace_dir.joinpath(project_name, f"{project_name}.srcs", "sim_1", "new")
             sim_dir.mkdir(parents=True, exist_ok=True)
             logger.info(f"Directory created: {workspace_dir}")
         except Exception as e:
             logger.error(f"Failed to create directory: {e}")
         
         # 保存代码文件
-        testbench_file_path = workspace_dir / f"tb_{module_name}.v"
+        testbench_file_path = sim_dir / f"tb_{module_name}.v"
         try:
             with open(testbench_file_path, 'w', encoding='utf-8') as f:
                 f.write(testbench_code)
@@ -331,18 +348,24 @@ def tester(state: State, config: RunnableConfig) -> Command[Literal["human_feedb
             is_valid = False
             validation_message = f"File save failed: {e}"
 
-        
+        # 将仿真文件添加至vivado项目中
+        try:
+            adding_result, adding_message = add_sim_files_to_project(project_name, workspace_dir, [str(testbench_file_path)])
+            if adding_result:
+                logger.info(adding_message)
+            else:
+                logger.error(adding_message)
+        except Exception as e:
+            logger.error(f"Failed to add sim files to project {project_name}: {e}")
 
-        code_file_path = project_dir / "src" / f"{module_name}.v"
-        output_file_path = project_dir / "sim" / f"sim_{module_name}.out"
-        # 然后验证语法,需要组合源代码和测试代码
-        is_valid, validation_message = validate_verilog_syntax([str(code_file_path),str(testbench_file_path)],output_file_path)
+        # 验证语法,需要组合源代码和测试代码
+        is_valid, validation_message = validate_verilog_syntax_vivado(project_name, workspace_dir, [str(testbench_file_path)])
         if is_valid:
             logger.info(f"Testbench syntax : {validation_message}")
 
             #然后验证逻辑正确性
             logger.info(f"正在仿真ing...")
-            logic_is_valid, logic_validation_message = validate_verilog_logic(output_file_path)
+            logic_is_valid, logic_validation_message = validate_verilog_logic_vivado(project_name, workspace_dir, str(testbench_file_path))
             if logic_is_valid:
                 logger.info(f"Testbench logic : {logic_validation_message}")
                 return Command(
