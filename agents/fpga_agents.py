@@ -42,9 +42,17 @@ tester_agent = create_fpga_agent(
     "fpga_tester"
 )
 
+debugger_agent = create_fpga_agent(
+    "debugger",
+    "debugger",
+    [],
+    "fpga_debugger"
+)
+
 # 导出所有FPGA智能体
 __all__ = [
     "planner_agent", 
     "coder_agent",
     "tester_agent"
+    "debugger_agent"
 ]

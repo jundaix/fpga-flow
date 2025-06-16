@@ -261,15 +261,27 @@ def human_feedback_node(
         additional_info = state.get("additional_info_needed", "")
         if additional_info:
             feedback = interrupt(f"tester遇到了问题:\n{additional_info}")
-            return Command(
-                update={
-                    "messages": [
-                        HumanMessage(content=feedback, name="user"),
-                    ],
-                    "additional_info_needed": "",
-                },
-                goto="tester",
-            )
+            if "coder" in feedback:
+                return Command(
+                    update={
+                        "messages": [
+                            HumanMessage(content=feedback, name="user"),
+                        ],
+                        "additional_info_needed": "",
+                    },
+                    goto="coder",
+                )
+            else:
+
+                return Command(
+                    update={
+                        "messages": [
+                            HumanMessage(content=feedback, name="user"),
+                        ],
+                        "additional_info_needed": "",
+                    },
+                    goto="tester",
+                )
         feedback = str(interrupt("Please Review the testbecnh Code.如果没有问题,请输入[ok]")).strip()
         # if the feedback is not accepted, return the coder node
         if feedback.upper() == "OK":

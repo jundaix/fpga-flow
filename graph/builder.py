@@ -8,6 +8,7 @@ from .nodes import (
     planner_node,
     coder_node,
     tester,
+    #debugger_node,
     human_feedback_node,
 )
 # 导入 SQLite 检查点保存器
@@ -21,6 +22,7 @@ def _build_base_graph():
     builder.add_node("planner", planner_node)
     builder.add_node("coder", coder_node)
     builder.add_node("tester", tester)
+    #builder.add_edge("debugger", "debugger_node")
     builder.add_node("human_feedback", human_feedback_node)
     return builder
 
@@ -45,13 +47,6 @@ def build_graph_with_memory():
     # build state graph
     builder = _build_base_graph()
     return builder.compile(checkpointer=memory)
-
-# def build_graph_with_memory():
-#     # 使用 SQLite 数据库持久化状态
-#     memory = SqliteSaver.from_conn_string("checkpoints.db")
-    
-#     builder = _build_base_graph()
-#     return builder.compile(checkpointer=memory)
 
 
 def build_graph():
