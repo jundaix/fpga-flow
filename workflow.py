@@ -37,7 +37,7 @@ class FPGAWorkflow:
     
     def __init__(self):
         """
-        初始化FPGA工作流程
+        初始化FPGA工作流程: 创建工作流程图，对工作图进行编译
         
         Args:
             use_memory: 是否使用持久化内存
@@ -59,6 +59,7 @@ class FPGAWorkflow:
         """
         运行交互式工作流程
         """
+        # 向用户展示工作流的内容
         print("\n" + "="*60)
         print("🚀 欢迎使用FPGA智能开发工作流程!")
         print("="*60)
@@ -77,7 +78,7 @@ class FPGAWorkflow:
                 continue
             break
             
-        # 创建初始状态
+        # 创建初始状态：state中的初始信息为用户输入，并默认需要人工审核每一步操作
         state = {
             # Runtime Variables
             "messages": [{"role": "user", "content": user_input}],
@@ -86,7 +87,7 @@ class FPGAWorkflow:
         
         # 运行工作流程
         print("\n🔄 开始处理您的需求...")
-        self._run_workflow(state)
+        self._run_workflow(state)       # 将拥护初始输入构成的状态输入
                                 
     
     def _get_user_input(self) -> str:
@@ -112,13 +113,14 @@ class FPGAWorkflow:
         try:
             # 使用stream方法支持interrupt
             config = {
-                "configurable": {"thread_id": "default"},
-                "recursion_limit": 100,
+                "configurable": {"thread_id": "default"},       # 设置线程ID，标识不同线程
+                "recursion_limit": 100,                         # 递归限制，避免浪费资源
             }
             
             return self._run_stream_with_interrupts(initial_state, config)
             
         except Exception as e:
+            # 处理异常情况
             logger.error(f"工作流程执行失败: {e}")
             print(f"\n❌ 工作流程执行失败: {e}")
             # 返回错误状态
@@ -151,11 +153,12 @@ class FPGAWorkflow:
                 
                 # 检查是否有中断
                 if "__interrupt__" in s:
+                    # 从包含中断的回复中提取中断内容
                     interrupts = s["__interrupt__"]
                     print(f"\n⏸️  检测到中断: {len(interrupts)} 个")
                     
                     for interrupt_info in interrupts:
-                        # Interrupt对象有resumable和value属性，不是字典
+                        # Interrupt对象有resumable和value属性，不是字典。hasattr用于安全地检查属性是否存在
                         if hasattr(interrupt_info, 'resumable') and interrupt_info.resumable:
                             # 获取中断的值（用户需要回应的内容）
                             interrupt_value = interrupt_info.value if hasattr(interrupt_info, 'value') else str(interrupt_info)
@@ -164,13 +167,13 @@ class FPGAWorkflow:
                             # 获取用户输入
                             user_response = input("\n👤 您的回应:")
                             
-                            # 创建恢复命令
+                            # 创建恢复命令(用于返回到发生中断的位置)
                             resume_command = Command(resume=user_response)
                             
                             print(f"\n✅ 正在恢复执行...")
                             
                             try:
-                                # 使用Command恢复执行，但不递归调用
+                                # 使用Command恢复执行，但不递归调用(即在处理好当前的中断后，跳出当前处理各个中断的循环，以新的由恢复的Command继续执行工作流)
                                 current_state = resume_command
                                 stream_finished = False
                                 break  # 跳出当前for循环，重新开始while循环
@@ -187,11 +190,11 @@ class FPGAWorkflow:
                         else:
                              print(f"\n⚠️  不可恢复的中断: {interrupt_info}")
                     
-                    # 如果处理了中断，跳出for循环
+                    # 如果处理了某个中断(即stream_finished为False)，跳出for循环，从while循环重新开始
                     if not stream_finished:
                         break
                 
-                # 正常处理流输出
+                # 正常处理流输出，识别并打印新的信息输出(或是动态处理其它指令)，将新的s作为final_state
                 result = self._process_stream_output(s, last_message_cnt)
                 if isinstance(result, tuple):
                     final_state, last_message_cnt = result
@@ -217,17 +220,17 @@ class FPGAWorkflow:
             (更新后的状态, 新的消息数量)
         """
         try:
-            if isinstance(s, dict) and "messages" in s:
-                if len(s["messages"]) > last_message_cnt:
+            if isinstance(s, dict) and "messages" in s:             # 检查流输出 s 是否为包含 messages 的字典
+                if len(s["messages"]) > last_message_cnt:           # 确认是否有新消息产生
                     last_message_cnt = len(s["messages"])
-                    message = s["messages"][-1]
-                    if isinstance(message, tuple):
+                    message = s["messages"][-1]                     # 提取最新消息
+                    if isinstance(message, tuple):                  # 动态处理不同消息格式
                         print(message)
                     else:
                         message.pretty_print()
                 return s, last_message_cnt
             else:
-                # For any other output format
+                # 处理其它的模型输出数据结构
                 print(f"Output: {s}")
                 return s, last_message_cnt
                 

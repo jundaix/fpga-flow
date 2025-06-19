@@ -3,10 +3,10 @@
 
 from typing import Literal
 
-# Define available LLM types
+# 定义可以使用的LLM类型
 LLMType = Literal["basic", "reasoning", "vision"]
 
-# Define agent-LLM mapping
+# 定义运行的代理和使用的LLM类型的映射
 AGENT_LLM_MAP: dict[str, LLMType] = {
     "planner": "basic",
     "coder": "basic",

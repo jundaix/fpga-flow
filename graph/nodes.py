@@ -76,9 +76,9 @@ def coder_node(state: State, config: RunnableConfig) -> Command[Literal["human_f
         try:
             adding_result, adding_message = add_files_to_project(project_name, workspace_path=workspace_dir, source_files=[str(code_file_path)])
             if adding_result:
-                logger.info(fadding_message)
+                logger.info(adding_message)
             else:
-                logger.error(fadding_message)
+                logger.error(adding_message)
         except Exception as e:
             logger.error(f"Failed to add sources to {project_name}: {e}")
        
