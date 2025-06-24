@@ -19,6 +19,7 @@ from agents.fpga_agents import (
 
 from utils.verilog_extractor import extract_verilog_code, validate_verilog_syntax, validate_verilog_logic
 from utils.vivado_operation import *
+from utils.judge_same_code import judge_same_code
 
 from .types import State
 
@@ -56,13 +57,17 @@ def coder_node(state: State, config: RunnableConfig) -> Command[Literal["human_f
             logger.error(f"Failed to creat project: {e}")
         
         # 在项目文件下创建源文件目录
-        source_files_dir = workspace_dir.joinpath(project_name, f"{project_name}.srcs", "sources_1", "new")
-        os.makedirs(source_files_dir, exist_ok=True)
+        try:
+            source_files_dir = workspace_dir.joinpath(project_name, f"{project_name}.srcs", "sources_1", "new")
+            source_files_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Source directory created: {source_files_dir}")
+        except Exception as e: 
+            logger.error(f"Failed to create source files directory: {e}")
         
         # 保存代码文件
         code_file_path = source_files_dir / f"{module_name}.v"
         try:
-            with open(code_file_path, 'w', encoding='utf-8') as f:
+            with open(code_file_path, 'w', encoding='gb2312') as f:
                 f.write(generated_code)
             logger.info(f"Code saved to: {code_file_path}")
             save_message = f"Code saved to {code_file_path}"
@@ -319,14 +324,38 @@ def tester(state: State, config: RunnableConfig) -> Command[Literal["human_feedb
    
     if testbench_code:
         logger.info("Testbench code extracted successfully")
-    
-        # 先保存测试台代码到文件，无论语法是否正确
+
         project_name = state.get('project_name', state.get('module_name', 'unknown'))
         module_name = state.get('module_name', 'unknown')
         
         # 定义workspace目录
         workspace_dir = Path(__file__).parent.parent / "workspace"
 
+        # 读取源码
+        try:
+            source_file = workspace_dir.joinpath(project_name, f"{project_name}.srcs", "sources_1", "new", f"{module_name}.v")
+            with open(source_file, 'r', encoding='gb2312') as f:
+                source_code = f.read()
+            logger.info(f"Source code read from {source_file}")
+        except Exception as e:
+            logger.error(f"Failed to read source file: {e}")
+
+        # 验证新生成的代码是否为源代码（当前存在对话时输出的testbench为源设计代码，并非testbench）
+        try:
+            if judge_same_code(source_code, testbench_code):
+                logger.warning("The generated code is source code, not a testbench!")
+                return Command(
+                    update={
+                        "messages": [AIMessage(content=f"{response_content}\n\nThe generated code is source code,\
+                         not a testbench!", name="tester")],
+                        "additional_info_needed": f"生成内容为:{response_content}\n其中的testbench代码与源代码重复，请检查！",
+                    },
+                    goto="human_feedback",
+                )
+        except Exception as e:
+            logger.warning(f"Failed to judge code similarity: {e}")
+
+        # 先保存测试台代码到文件，无论语法是否正确
         # 创建目录
         try:
             sim_dir = workspace_dir.joinpath(project_name, f"{project_name}.srcs", "sim_1", "new")
@@ -338,7 +367,7 @@ def tester(state: State, config: RunnableConfig) -> Command[Literal["human_feedb
         # 保存代码文件
         testbench_file_path = sim_dir / f"tb_{module_name}.v"
         try:
-            with open(testbench_file_path, 'w', encoding='utf-8') as f:
+            with open(testbench_file_path, 'w', encoding='gb2312') as f:
                 f.write(testbench_code)
             logger.info(f"Code saved to: {testbench_file_path}")
             save_message = f"Code saved to {testbench_file_path}"
@@ -370,7 +399,9 @@ def tester(state: State, config: RunnableConfig) -> Command[Literal["human_feedb
                 logger.info(f"Testbench logic : {logic_validation_message}")
                 return Command(
                     update={
-                        "messages": [AIMessage(content=f"{response_content}\n\n{save_message}\nSyntax validation: PASSED - {validation_message}\n使用了vvp进行了仿真，Logic validation: PASSED - {logic_validation_message}", name="tester")],
+                        "messages": [AIMessage(content=f"{response_content}\n\n{save_message}\n\
+                            Syntax validation: PASSED - {validation_message}\nSimulation was performed using Vivado. \
+                                Logic validation: PASSED - {logic_validation_message}", name="tester")],
                         "testbench_code": testbench_code,
                     },
                     goto="human_feedback",
@@ -379,7 +410,10 @@ def tester(state: State, config: RunnableConfig) -> Command[Literal["human_feedb
                 logger.warning(f"Testbench logic validation failed: {logic_validation_message}")
                 return Command(
                     update={
-                        "messages": [AIMessage(content=f"{response_content}\n\n{save_message}\nSyntax validation: PASSED - {validation_message}\n使用了vvp进行了仿真，Logic validation: FAILED\n{logic_validation_message}", name="tester")],
+                        "messages": [AIMessage(content=f"{response_content}\n\n{save_message}\n\
+                            Syntax validation: PASSED - {validation_message}\nSimulation was performed using Vivado. \
+                                Logic validation: FAILED\n{logic_validation_message}", name="tester")],
+                        "testbench_code": testbench_code,
                         "additional_info_needed": f"testbench语法验证通过,逻辑仿真未通过:\n{logic_validation_message}",
                     },
                     goto="human_feedback",
@@ -388,7 +422,8 @@ def tester(state: State, config: RunnableConfig) -> Command[Literal["human_feedb
             logger.warning(f"Testbench syntax validation failed: {validation_message}")
             return Command(
                 update={
-                    "messages": [AIMessage(content=f"{response_content}\n\n{save_message}\nSyntax validation: FAILED\n{validation_message}", name="tester")],
+                    "messages": [AIMessage(content=f"{response_content}\n\n{save_message}\nSyntax validation: FAILED\n\
+                        {validation_message}", name="tester")],
                     "testbench_code": testbench_code,
                     "additional_info_needed": f"testbench代码编译出现错误，请你手动解决这个问题",
                 },

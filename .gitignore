@@ -25,4 +25,4 @@ workspace/
 .ipynb_checkpoints/
 
 # 在本地的保存Vivado输出的信息
-vivado_tcl_order.txt
+running_result/

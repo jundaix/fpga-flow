@@ -3,10 +3,19 @@ import tempfile
 import os
 from typing import List
 import re
+from pathlib import Path
 
 
 def get_std_information(std_message: str):
-    pattern = r'^[A-Z]+:.*'
+    pattern = (
+        r'^(?:'
+          # 以大写单词+冒号或[大写单词]开头
+        r'[A-Z]+(?: [A-Z]+)*:|\[[A-Z]+(?: [A-Z]+)*\]'
+        r'|'
+          # 以“error:”或“critical warning:”开头，不区分大小写
+        r'(?:(?i:error:|critical warning:))'
+        r').*'
+    )
     matches = re.findall(pattern, std_message, flags=re.MULTILINE)
 
     std_info = ""
@@ -55,6 +64,7 @@ def run_vivado_tcl_script_in_memory(tcl_script):
 
     # 删除临时文件
     os.remove(tcl_script_path)
+
     return stdout.decode(), stderr.decode()
 
 def create_project(project_name:str, workspace_path:str, part="xc7z020clg484-1") -> tuple[bool, str]:
@@ -70,9 +80,11 @@ def create_project(project_name:str, workspace_path:str, part="xc7z020clg484-1")
     workspace_path = os.path.normpath(workspace_path)
     project_path = os.path.normpath(os.path.join(workspace_path, project_name))
     project_file = os.path.join(project_path, f"{project_name}.xpr")
+    
     # 检查 .xpr 文件是否已存在
     if os.path.exists(project_file):
-        return  True, f"项目 '{project_name}' 已经存在，跳过创建步骤。"
+        print("项目文件已存在")
+        return  True, f"The project '{project_name}' already exists. Skipping creation step."
 
     # Ensure workspace directory exists
     os.makedirs(workspace_path, exist_ok=True)
@@ -87,9 +99,9 @@ def create_project(project_name:str, workspace_path:str, part="xc7z020clg484-1")
     stderr = get_std_information(stderr_source)
 
     if stderr_source == "":
-        return True, f"项目 '{project_name}' 创建成功。\n运行输出为：\n{stdout}"
+        return True, f"The project '{project_name}' was created successfully.\nExecution output:\n{stdout}\n{stderr}"
     else:
-        return False, f"项目 '{project_name}' 创建失败。\n运行输出为：\n{stdout}\n错误信息为：\n{stderr}"
+        return False, f"Failed to create project '{project_name}'.\nExecution output:\n{stdout}{stderr}"
 
 def add_files_to_project(
     project_name: str,
@@ -122,13 +134,14 @@ def add_files_to_project(
     update_compile_order -fileset sources_1
     """
     
-    stdout, stderr_source = run_vivado_tcl_script_in_memory(tcl_script)
+    stdout_source, stderr_source = run_vivado_tcl_script_in_memory(tcl_script)
+    stdout = get_std_information(stdout_source)
     stderr = get_std_information(stderr_source)
     
     if stderr == "":
         return True, f"Added {len(source_files)} sources to {project_name}"
     else:
-        return False, f"Failed to add {len(source_files)} sources to {project_name}.\nError: {stderr}"
+        return False, f"Failed to add {len(source_files)} sources to {project_name}.\nExecution output:\n{stdout}{stderr}"
 
 def add_sim_files_to_project(
     project_name: str,
@@ -155,13 +168,14 @@ def add_sim_files_to_project(
     update_compile_order -fileset sim_1
     """
 
-    stdout, stderr_source = run_vivado_tcl_script_in_memory(tcl_script)
+    stdout_source, stderr_source = run_vivado_tcl_script_in_memory(tcl_script)
+    stdout = get_std_information(stdout_source)
     stderr = get_std_information(stderr_source)
 
     if stderr == "":
-        return True, f"Added {len(source_files)} sim to {project_name}"
+        return True, f"Added {len(source_files)} sim files to {project_name}"
     else:
-        return False, f"Failed to add {len(source_files)} sim to {project_name}.\nError: {stderr}"
+        return False, f"Failed to add {len(source_files)} sim files to {project_name}.\nExecution output:\n{stdout}{stderr}"
 
 # def set_top_sim_module(
 #     project_name: str,
@@ -222,7 +236,7 @@ def validate_verilog_syntax_vivado(
     project_file = os.path.join(project_path, f"{project_name}.xpr")
 
     if not os.path.exists(project_file):
-        return False, f"未能在 {project_file} 处找到项目 {project_name}"
+        return False, f"Project {project_name} not found at {project_file}"
     
     def format_files(file_list: List[str]) -> str:
         return "\n    ".join([f"add_files -fileset syntax_check {{{os.path.normpath(f).replace('\\', '/')}}}" 
@@ -250,11 +264,14 @@ def validate_verilog_syntax_vivado(
         stderr = get_std_information(stderr_source)
 
         if "No errors or warning reported." in stdout:
-            return True, f"语法验证通过！\n{stdout}"
+            return True, f"Syntax check passed!\n{stdout}\n{stderr}"
         else:
-            return False, f"语法验证失败！\n{stdout}"
+            return False, f"Syntax check failed!\n{stdout}\n{stderr}"
     except Exception as e:
-        return False, f"使用Vivado进行语法验证是发生错误：\n{e}"
+        return False, f"An error occurred during syntax checking with Vivado:\n{e}"
+
+def contains_error(message: str) -> bool:
+    return bool(re.search(r'\berror\b', message, flags=re.IGNORECASE))
 
 def validate_verilog_logic_vivado(
     project_name: str,
@@ -276,7 +293,7 @@ def validate_verilog_logic_vivado(
     project_file = os.path.join(project_path, f"{project_name}.xpr")
 
     if not os.path.exists(project_file):
-        return False, f"未能在 {project_file} 处找到项目 {project_name}"
+        return False, f"Project {project_name} not found at {project_file}"
 
     test_file_name = Path(test_module).stem
     
@@ -292,28 +309,21 @@ def validate_verilog_logic_vivado(
     """
 
     stdout_source, stderr_source = run_vivado_tcl_script_in_memory(tcl_script)
-    " 不清楚对运行标准输出的处理 "
+
     stdout = get_std_information(stdout_source)
     stderr = get_std_information(stderr_source)
 
-    if stderr == "":
-        return True, f"{stdout}"
+    if stderr == "" and not contains_error(stdout):
+        return True, f"Simulation passed:\n{stdout}\n{stderr}"
     else:
-        return False, f"Failed to launch simulation for project {project_name}.\nError: {stderr}"
+        return False, f"Simulation failed:\n{stdout}\nError message:\n{stderr}"
 
 if __name__ == "__main__":
-    from pathlib import Path
-    workspace_dir = Path(__file__).parent.parent / "workspace"
-    # result, result_message = create_project("counter_1", workspace_dir)
-    # print(result_message)
+    # validate, message = validate_verilog_logic_vivado("counter_8bit_enable_reset", "D:/Pycharm_Project/fpga-flow/workspace", "tb_counter_8bit_enable_reset")
+    
+    # if validate:
+    #     print(f"验证正确：{message}")
+    # else:
+    #     print(f"验证出错：{message}")
 
-    # is_valid, validation_message = validate_verilog_syntax_vivado("counter", workspace_dir, ["D:/Pycharm_Project/fpga-flow/workspace/counter/counter.srcs/sources_1/new/BCD_counter_4bit.v"])
-
-    is_logic, logic_message = validate_verilog_logic_vivado("counter", workspace_dir, "D:/Pycharm_Project/fpga-flow/workspace/counter/counter.srcs/sim_1/new/tb_BCD_counter_4bit.v")
-    if is_logic:
-        print(f"逻辑验证通过：\n{logic_message}")
-    else:
-        print(f"逻辑验证失败：\n{logic_message}")
-
-
-    print("程序结束")
+    print("测试结束")

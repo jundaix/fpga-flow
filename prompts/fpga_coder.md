@@ -60,10 +60,10 @@ end
 - Support hierarchical testing
 
 ### 4. Code Comments
-- **All code comments must be written in Chinese**
-- Provide detailed Chinese comments for module functionality
-- Use Chinese comments to explain complex logic
-- Include Chinese descriptions for signal purposes and data flow
+- **All code comments must be written in English**
+- Provide detailed English comments for module functionality
+- Use English comments to explain complex logic
+- Include English descriptions for signal purposes and data flow
 
 ## Current Task Information
 
