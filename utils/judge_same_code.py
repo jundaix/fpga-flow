@@ -5,7 +5,7 @@ def judge_same_code(code_a: str, code_b: str) -> bool:
     similarity = calculate_similarity(code_a, code_b)
 
     # 根据相似度大小返回判定结果
-    if similarity > 0.85:
+    if similarity > 0.9:
         return True
     else:
         return False

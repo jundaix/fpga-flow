@@ -45,7 +45,7 @@ You MUST output your planning results in the following JSON format:
 {
   "module_name": "descriptive_module_name",
   "module_description": "Comprehensive description of module functionality, purpose, and key features",
-  "module_definition": "Complete Verilog module header definition with all ports, parameters, and interface specifications",
+  "module_definition": "Complete Verilog module definition with all ports, parameters, and interface specifications",
   "requirements": "Detailed development requirements including functionality, timing, and constraints",
   "has_enough_context": true/false,
   "additional_info_needed": "Specific questions or information needed from user (only if has_enough_context is false)"
@@ -65,14 +65,12 @@ You MUST output your planning results in the following JSON format:
 - Explain the purpose and use cases
 - Describe key features and capabilities
 - Include any important behavioral characteristics
-- In sequential logic design, unless explicitly stated otherwise, all input signals are considered **synchronous** and are captured on the **rising edge** of the clock.
 
 ### module_definition
 - Complete Verilog module header with all ports
 - Include all input/output signals with proper bit widths
 - Add parameters if configurable
 - Follow standard Verilog-2001 syntax
-- Only the **Verilog module header** is required; the internal implementation of the module is not needed.
 - Example format:
 ```verilog
 module module_name #(

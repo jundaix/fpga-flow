@@ -48,13 +48,6 @@ initial begin
     forever #(CLK_PERIOD/2) clk = ~clk;
 end
 
-// Define the data or vectors used for testing.
-reg [WIDTH-1:0] test_vectors [0:4];
-reg [WIDTH-1:0] expected_outputs [0:4];
-
-// (Optional) Define intermediate variables used in the test.
-integer n;
-
 // Test sequence
 initial begin
     // Initialization
@@ -82,13 +75,19 @@ begin
 end
 endtask
 
-// Result checking
+// Result checking with assertions
 always @(posedge clk) begin
     if (rst_n) begin
         // Real-time result checking
         if (actual_value !== expected_value) begin
             $error("[ERROR] Output validation failed at time %0t: expected %h, got %h", $time, expected_value, actual_value);
             $finish; // finish simulation on error
+        end
+        
+        // Check timing constraints
+        if (!timing_constraint) begin
+            $error("[TIMING ERROR] Timing violation detected at %0t", $time);
+            $finish; // finish simulation on timing error
         end
     end
 end
@@ -97,12 +96,13 @@ end
 task check_output;
     input [WIDTH-1:0] expected;
     input [WIDTH-1:0] actual;
+    input string test_name;
 begin
     if (expected !== actual) begin
-        $error("[ASSERTION FAILED] test name: Expected %h, Got %h at time %0t", expected, actual, $time);
+        $error("[ASSERTION FAILED] %s: Expected %h, Got %h at time %0t", test_name, expected, actual, $time);
         $finish; // finish simulation on assertion failure
     end else begin
-        $display("[PASS] test name, : Output correct (%h) at time %0t", actual, $time);
+        $display("[PASS] %s: Output correct (%h) at time %0t", test_name, actual, $time);
     end
 end
 endtask
@@ -132,7 +132,8 @@ end
 integer i;
 initial begin
     for (i = 0; i < 100; i = i + 1) begin
-        test_data = test_input;
+        @(posedge clk);
+        test_data = $random;
         @(posedge clk); // Wait for one clock cycle
         
         // Check random test results
@@ -153,6 +154,7 @@ initial begin
     };
     
     for (i = 0; i < 5; i = i + 1) begin
+        @(posedge clk);
         test_input = test_vectors[i];
         @(posedge clk);
         
@@ -182,6 +184,7 @@ task automatic test_specific_function;
     input [WIDTH-1:0] expected_output;
     input string test_name;
 begin
+    @(posedge clk);
     // Set input
     module_input = test_input;
     @(posedge clk);
@@ -226,8 +229,6 @@ Based on the above information, design comprehensive test cases and write corres
 1. **Syntactic Correctness**: Adhere to Verilog-2001 syntax (IEEE Std 1364-2001) only.
 2. **Executable**: Can be successfully compiled and run in Vivado 2018.3
 3. **Sensitivity List**: Only the generated clock signal may appear in the sensitivity list.
-4. **Data types**: Only the following three types are permitted — wire, reg, and integer.
-5. **Assignment style**: Only blocking (=) assignments are permitted.
 
 ## Important Notes:
 1. **Avoid Name Conflicts**: Choose descriptive and non-conflicting testbench names

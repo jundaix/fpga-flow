@@ -10,6 +10,9 @@ from .nodes import (
     coder_node,
     tester,
     human_feedback_node,
+    code_planner_node,
+    test_planner_node,
+    logic_test_node,
 )
 
 
@@ -18,9 +21,12 @@ def _build_base_graph():
     builder = StateGraph(State)
     builder.add_edge(START, "planner")
     builder.add_node("planner", planner_node)
+    builder.add_node("code_planner", code_planner_node)
     builder.add_node("coder", coder_node)
+    builder.add_node("test_planner", test_planner_node)
     builder.add_node("tester", tester)
     builder.add_node("human_feedback", human_feedback_node)
+    builder.add_node("logic_test", logic_test_node)
     return builder
 
 

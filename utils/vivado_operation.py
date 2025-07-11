@@ -296,14 +296,17 @@ def validate_verilog_logic_vivado(
         return False, f"Project {project_name} not found at {project_file}"
 
     test_file_name = Path(test_module).stem
+
+    # 要求最大仿真时间为1s的指令
+    set_sim_time = "set_property -name {xsim.simulate.runtime} -value {1s} -objects [get_filesets sim_1]"
     
     tcl_script = f"""
     open_project {{{project_file.replace('\\', '/')}}}
     set_property top {test_file_name} [get_filesets sim_1]
     set_property top_lib xil_defaultlib [get_filesets sim_1]
     update_compile_order -fileset sim_1
+    {set_sim_time}
     launch_simulation
-    restart
     run_all
     close_sim
     """
@@ -319,7 +322,7 @@ def validate_verilog_logic_vivado(
         return False, f"Simulation failed:\n{stdout}\nError message:\n{stderr}"
 
 if __name__ == "__main__":
-    # validate, message = validate_verilog_logic_vivado("counter_8bit_enable_reset", "D:/Pycharm_Project/fpga-flow/workspace", "tb_counter_8bit_enable_reset")
+    # validate, message = validate_verilog_logic_vivado("counter_8bit_enable_async_reset", "D:/Pycharm_Project/fpga-flow/workspace", "tb_counter_8bit_enable_async_reset")
     
     # if validate:
     #     print(f"验证正确：{message}")

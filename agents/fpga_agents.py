@@ -30,12 +30,28 @@ planner_agent = create_fpga_agent(
     "fpga_planner"
 )
 
+# FPGA Code_Planner Agent - 根据实现需求采用自然语言描述FPGA模块的设计
+code_planner_agent = create_fpga_agent(
+    "code_planner", 
+    "planner", 
+    [],
+    "fpga_code_planner"
+)
+
 # FPGA Coder Agent - 生成Verilog/SystemVerilog代码
 coder_agent = create_fpga_agent(
     "coder", 
     "coder", 
     [], 
     "fpga_coder"
+)
+
+# FPGA Test_Planner Agent - 根据实现需要针对FPGA模块编写测试计划
+test_planner_agent = create_fpga_agent(
+    "test_planner", 
+    "planner", 
+    [],
+    "fpga_test_planner"
 )
 
 tester_agent = create_fpga_agent(
@@ -49,5 +65,7 @@ tester_agent = create_fpga_agent(
 __all__ = [
     "planner_agent", 
     "coder_agent",
-    "tester_agent"
+    "tester_agent", 
+    "code_planner_agent", 
+    "test_planner_agent"
 ]

@@ -15,7 +15,7 @@ class State(MessagesState):
     module_name: str = ""                   # 项目名称，与module_name同步，由plan_agent生成
     project_name: str = ""                  # 项目名称，与module_name同步，由plan_agent生成
     module_description: str = ""            # 模块的描述（用于模块的实现），由plan_agent生成
-    module_definition: str = ""             # 模块的定义（用于模块的实现），由plan_agent生成
+    module_definition: str = ""             # 模块的定义，即模块头，包含模块名称和IO端口部分（用于模块的实现），由plan_agent生成
 
     module_code: str = ""                   # 模块的设计代码，由code_agent生成
     testbench_code: str = ""                # 模块的测试代码，由test_agent生成
