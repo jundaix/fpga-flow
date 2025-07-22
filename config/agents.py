@@ -8,7 +8,9 @@ LLMType = Literal["basic", "reasoning", "vision"]
 
 # 定义运行的代理和使用的LLM类型的映射
 AGENT_LLM_MAP: dict[str, LLMType] = {
-    "planner": "basic",
-    "coder": "basic",
-    "tester": "basic",
+    "coordinator":   "basic",
+    "planner":       "basic",
+    "coder":         "basic",
+    "tester":        "basic",
+    "analyst":       "basic",
 }

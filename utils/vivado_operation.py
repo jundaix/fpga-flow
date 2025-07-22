@@ -25,6 +25,7 @@ def get_std_information(std_message: str):
     
     return std_info
 
+
 def run_vivado_tcl_script_in_memory(tcl_script):
     """
     使用 Vivado 运行内存中的 TCL 脚本。
@@ -67,6 +68,24 @@ def run_vivado_tcl_script_in_memory(tcl_script):
 
     return stdout.decode(), stderr.decode()
 
+
+def judge_project_exit(project_name: str, workspace_path: str) -> bool:
+    """
+    判断项目是否存在
+    Args:
+        project_name (str): 项目名称。  
+        workspace_path (str): 工作区路径。
+    Returns:
+        bool: 若项目存在则返回 True，否则返回 False。
+    """
+    # 定位项目的 .xpr 文件是否存在
+    workspace_path = os.path.normpath(workspace_path)
+    project_path = os.path.normpath(os.path.join(workspace_path, project_name))
+    project_file = os.path.join(project_path, f"{project_name}.xpr")
+
+    return os.path.exists(project_file)
+
+
 def create_project(project_name:str, workspace_path:str, part="xc7z020clg484-1") -> tuple[bool, str]:
     """
     使用 Vivado 创建一个新的项目。
@@ -98,10 +117,11 @@ def create_project(project_name:str, workspace_path:str, part="xc7z020clg484-1")
     stdout = get_std_information(stdout_source)
     stderr = get_std_information(stderr_source)
 
-    if stderr_source == "":
-        return True, f"The project '{project_name}' was created successfully.\nExecution output:\n{stdout}\n{stderr}"
+    if stderr == "":
+        return True, f"The project '{project_name}' was created successfully.\nExecution output:\n{stdout}"
     else:
-        return False, f"Failed to create project '{project_name}'.\nExecution output:\n{stdout}{stderr}"
+        return False, f"Failed to create project '{project_name}'.\nExecution output:\n{stdout}\nError messages:\n{stderr}"
+
 
 def add_files_to_project(
     project_name: str,
@@ -141,7 +161,8 @@ def add_files_to_project(
     if stderr == "":
         return True, f"Added {len(source_files)} sources to {project_name}"
     else:
-        return False, f"Failed to add {len(source_files)} sources to {project_name}.\nExecution output:\n{stdout}{stderr}"
+        return False, f"Failed to add {len(source_files)} sources to {project_name}.\nExecution output:\n{stdout}\nError messages:\n{stderr}"
+
 
 def add_sim_files_to_project(
     project_name: str,
@@ -175,7 +196,8 @@ def add_sim_files_to_project(
     if stderr == "":
         return True, f"Added {len(source_files)} sim files to {project_name}"
     else:
-        return False, f"Failed to add {len(source_files)} sim files to {project_name}.\nExecution output:\n{stdout}{stderr}"
+        return False, f"Failed to add {len(source_files)} sim files to {project_name}.\nExecution output:\n{stdout}\nError messages:\n{stderr}"
+
 
 # def set_top_sim_module(
 #     project_name: str,
@@ -215,6 +237,7 @@ def add_sim_files_to_project(
 #         return True, f"Set top module {top_file_name} for project {project_name} successfully."
 #     else:
 #         return False, f"Failed to set top module {top_file_name} for project {project_name}.\nError: {stderr}"
+
 
 def validate_verilog_syntax_vivado(    
     project_name: str,
@@ -264,14 +287,16 @@ def validate_verilog_syntax_vivado(
         stderr = get_std_information(stderr_source)
 
         if "No errors or warning reported." in stdout:
-            return True, f"Syntax check passed!\n{stdout}\n{stderr}"
+            return True, f"Syntax check PASSED!\nExecution output:\n{stdout}\nWarning messages:\n{stderr}"
         else:
-            return False, f"Syntax check failed!\n{stdout}\n{stderr}"
+            return False, f"Syntax check FAILED!\nExecution output:\n{stdout}\nError messages:\n{stderr}"
     except Exception as e:
         return False, f"An error occurred during syntax checking with Vivado:\n{e}"
 
+
 def contains_error(message: str) -> bool:
     return bool(re.search(r'\berror\b', message, flags=re.IGNORECASE))
+
 
 def validate_verilog_logic_vivado(
     project_name: str,
@@ -317,16 +342,17 @@ def validate_verilog_logic_vivado(
     stderr = get_std_information(stderr_source)
 
     if stderr == "" and not contains_error(stdout):
-        return True, f"Simulation passed:\n{stdout}\n{stderr}"
+        return True, f"Testbench logic verification PASSED:\nExecution output:\n{stdout}\nWarning messages:\n{stderr}"
     else:
-        return False, f"Simulation failed:\n{stdout}\nError message:\n{stderr}"
+        return False, f"Testbench logic verification FAILED:\nExecution output:\n{stdout}\nError message:\n{stderr}"
+        
 
 if __name__ == "__main__":
-    # validate, message = validate_verilog_logic_vivado("counter_8bit_enable_async_reset", "D:/Pycharm_Project/fpga-flow/workspace", "tb_counter_8bit_enable_async_reset")
+    validate, message = validate_verilog_logic_vivado("counter_8bit_enable_reset", "D:/Pycharm_Project/fpga-flow/workspace", "tb_counter_8bit_enable_reset")
     
-    # if validate:
-    #     print(f"验证正确：{message}")
-    # else:
-    #     print(f"验证出错：{message}")
+    if validate:
+        print(f"验证正确：{message}")
+    else:
+        print(f"验证出错：{message}")
 
     print("测试结束")

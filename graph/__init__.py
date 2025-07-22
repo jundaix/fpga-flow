@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: MIT
 
 from .builder import build_graph_with_memory, build_graph
+from .types import State
 
 __all__ = [
     "build_graph_with_memory",
     "build_graph",
+    "State",
 ]

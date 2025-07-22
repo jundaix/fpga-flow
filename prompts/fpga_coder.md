@@ -74,7 +74,7 @@ end
 
 **Module Name**: {{ module_name }}
 **Module Description**: {{ module_description }}
-**Module Definition**: {{ module_definition  }}
+**Module Interface**: {{ module_interface  }}
 
 ---
 

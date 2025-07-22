@@ -23,7 +23,7 @@ Your task is to **analyze** the provided module specifications (functional requi
 
 **Module Name**: {{ module_name }}
 **Module Description**: {{ module_description }}
-**Module Definition**: {{ module_definition  }}
+**Module Interface**: {{ module_interface  }}
 **Design Requirements**: {{ requirements }}
 
 ---
