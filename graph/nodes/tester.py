@@ -90,7 +90,7 @@ def test_node(state: State, config: RunnableConfig) -> Command:
         project_name = state.get('project_name', state.get('module_name', 'unknown'))
         module_name = state.get('module_name', 'unknown')
         # 定义workspace目录
-        workspace_dir = Path(__file__).parent.parent / "workspace"
+        workspace_dir = Path(__file__).parent.parent.parent / "workspace"
 
         # 先判定项目是否已经建立，则认为当前操作非法（未建立项目则不存在可以实例化的源码）
         if not judge_project_exit(project_name, workspace_dir):

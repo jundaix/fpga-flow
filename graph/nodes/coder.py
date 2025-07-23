@@ -94,7 +94,7 @@ def code_node(state: State, config: RunnableConfig) -> Command:
         project_name = state.get('project_name', state.get('module_name', 'unknown'))
         module_name = state.get('module_name', 'unknown')
         # 定义workspace目录
-        workspace_dir = Path(__file__).parent.parent / "workspace"
+        workspace_dir = Path(__file__).parent.parent.parent / "workspace"
 
         # 先检查是否已经建立项目，再决定是否创建项目，若项目创建失败，退出节点并返回错误信息
         if not judge_project_exit(project_name, workspace_dir):
