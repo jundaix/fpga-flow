@@ -1,4 +1,4 @@
-from graph.types import State
+from graph.types import State, update_dict_value
 from agents.fpga_agents import time_analyse_agent
 from .getting_info import get_json_info
 
@@ -21,8 +21,9 @@ def time_analyst_node(state: State, config: RunnableConfig) -> Command:
     Module Name: {state["module_name"]}
     Module Description: {state["module_descrption"]}
     Module Interface: {state["module_interface"]}
-    Design Requirements: {state["design_requirements"]}
-    """
+    Design Requirements: {state["requirements"]}
+    Suggestions: {state["next_step_suggest"]}
+    """                                             # Suggestions 为操作执行建议，后续分析效果
 
     state_copy = copy.deepcopy(state)
     state_copy["messages"] = [
@@ -40,7 +41,6 @@ def time_analyst_node(state: State, config: RunnableConfig) -> Command:
         logger.info(f"Time analysing result: {json_info}")
 
         timing_proposing = json_info.get("timing_proposing")
-
         return Command(
             update={
                 "timing_proposing": timing_proposing,
@@ -48,16 +48,18 @@ def time_analyst_node(state: State, config: RunnableConfig) -> Command:
                     AIMessage(content=response_content, name="time_analyst"),
                 ],
                 "additional_info_needed": "",
-                "task_finished.time_analysing": True,
+                "task_finished": update_dict_value(state, "task_finished", "time_analysis", True),
             }
         )
     else:
         logger.warning(f"Failed to get time analysing result from LLM: {response_content}")
+        
         return Command(
             update={
                 "messages": [
                     AIMessage(content=response_content, name="time_analyst"),
                 ],
                 "additional_info_needed": f"Fail to get time analysing result:\n{json_info}",
+                "task_finished": update_dict_value(state, "task_finished", "time_analysis", False),
             }
         )

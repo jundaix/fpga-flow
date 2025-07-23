@@ -65,19 +65,19 @@ if __name__ == "__main__":
 
     builder = StateGraph(State)
 
-    builder.add_node("coordinator", coordinator_node)
-    builder.add_edge(START, "coordinator")
-    builder.add_edge("coordinator", END)
+    # builder.add_node("coordinator", coordinator_node)
+    # builder.add_edge(START, "coordinator")
+    # builder.add_edge("coordinator", END)
 
-    graph = builder.compile()
+    # graph = builder.compile()
 
-    state = {
-        # Runtime Variables
-        "messages": [{"role": "user", "content": "设计一个8位计数器，带使能和复位功能"}],
-        "auto_accepted_plan": False,
-    }
+    # state = {
+    #     # Runtime Variables
+    #     "messages": [{"role": "user", "content": "设计一个8位计数器，带使能和复位功能"}],
+    #     "auto_accepted_plan": False,
+    # }
 
-    for s in graph.stream(state):
-        print(s)
+    # for s in graph.stream(state):
+    #     print(s)
 
-    print("运行结束")
+    # print("运行结束")

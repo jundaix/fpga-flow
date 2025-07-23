@@ -78,11 +78,18 @@ class FPGAWorkflow:
                 continue
             break
             
-        # 创建初始状态：state中的初始信息为用户输入，并默认需要人工审核每一步操作
+        # 创建初始状态：state中的初始信息为用户输入，并默认需要人工审核每一步操作，定义项目所需的所有任务都未完成
         state = {
             # Runtime Variables
             "messages": [{"role": "user", "content": user_input}],
             "auto_accepted_plan": False,
+            "task_finished": {
+            "time_analysis":    False,
+            "module_code_writing": False,
+            "testbench_writing":   False,
+            "logic_test":          False
+            },
+            "next_step": ""
         }
         
         # 运行工作流程

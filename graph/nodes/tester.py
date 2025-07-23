@@ -1,8 +1,9 @@
-from graph.types import State
+from graph.types import State, update_dict_value
 from agents.fpga_agents import test_planner_agent, tester_agent
 from utils.verilog_extractor import extract_verilog_code
 from utils.vivado_operation import *
 from utils.judge_same_code import judge_same_code
+from .getting_info import get_error_info
 
 from langgraph.types import Command
 from langchain_core.runnables import RunnableConfig
@@ -22,8 +23,10 @@ def test_plan_node(state: State, config: RunnableConfig) -> Command:
     Module Name: {state["module_name"]}
     Module Description: {state["module_descrption"]}
     Module Interface: {state["module_interface"]}
-    Requirement: {state["requirement"]}
-    """
+    Requirement: {state["requirements"]}
+    Timing Constraint: {state["timing_proposing"]}
+    Suggestions: {state["next_step_suggest"]}
+    """                                             # Suggestions 为操作执行建议，后续分析效果
 
     # 复制图状态，在复制的状态中更改 message 字段，为该节点添加特定的 message
     state_copy = copy.deepcopy(state)
@@ -50,7 +53,9 @@ def test_plan_node(state: State, config: RunnableConfig) -> Command:
 
         return Command(
             update={
-                "additional_info_needed": "Fail to generate FPGA test design",
+                # llm 未给出 response，此处不更新 message 内容
+                "additional_info_needed": "[System Error] Fail to generate FPGA test design",
+                "testbench_code_plan": "",
             },
         )
 
@@ -103,6 +108,11 @@ def test_node(state: State, config: RunnableConfig) -> Command:
             logger.info(f"Source code read from {source_file}")
         except Exception as e:
             logger.error(f"Failed to read source file: {e}")
+            return Command(
+                update={
+                    "additional_info_needed": f"[System Error] Fail to read the source file: {e}",
+                }
+            )
 
         # 验证新生成的代码是否为源代码（当前存在对话时输出的testbench为源设计代码，并非testbench）
         try:
@@ -117,6 +127,11 @@ def test_node(state: State, config: RunnableConfig) -> Command:
                 )
         except Exception as e:
             logger.warning(f"Failed to judge code similarity: {e}")
+            return Command(
+                update={
+                    "additional_info_needed": f"[System Error] Fail to judge code similarity: {e}",
+                }
+            )
 
         # 先保存测试台代码到文件，无论语法是否正确
         # 创建目录
@@ -128,7 +143,7 @@ def test_node(state: State, config: RunnableConfig) -> Command:
             logger.error(f"Failed to create directory: {e}")
             return Command(
                 update={
-                    "additional_info_needed": f"Fail to create sim files directory: {e}",
+                    "additional_info_needed": f"[System Error] Fail to create sim files directory: {e}",
                 }, 
             )
         
@@ -143,7 +158,7 @@ def test_node(state: State, config: RunnableConfig) -> Command:
             logger.error(f"Failed to save code file: {e}")
             return Command(
                 update={
-                    "additional_info_needed": f"Fail to save the testbench file: {e}",
+                    "additional_info_needed": f"[System Error] Fail to save the testbench file: {e}",
                 }, 
             )
 
@@ -156,14 +171,14 @@ def test_node(state: State, config: RunnableConfig) -> Command:
                 logger.error(adding_message)
                 return Command(
                     update={
-                        "additional_info_needed": f"Fail to add the testbench file to project!\n{adding_message}",
+                        "additional_info_needed": f"[System Error] Fail to add the testbench file to project!\n{adding_message}",
                     }, 
                 )
         except Exception as e:
             logger.error(f"Failed to add sim files to project {project_name}: {e}")
             return Command(
                 update={
-                    "additional_info_needed": f"Fail to add the testbench file to project!\n{e}",
+                    "additional_info_needed": f"[System Error] Fail to add the testbench file to project!\n{e}",
                 }, 
             )
 
@@ -171,31 +186,41 @@ def test_node(state: State, config: RunnableConfig) -> Command:
         is_valid, validation_message = validate_verilog_syntax_vivado(project_name, workspace_dir, [str(testbench_file_path)])
         if is_valid:
             logger.info(f"Testbench syntax : {validation_message}")
+
             return Command(
                 update={
                     "messages": [AIMessage(content=f"{response_content}\n\n{save_message}\n\
                         Syntax validation: PASSED - {validation_message}", name="tester")],
                     "testbench_code": testbench_code,
+                    "testbench_code_syntax_error": "",
                     "additional_info_needed": "",
-                    "task_finished.testbench_writing": True,
+                    "task_finished": update_dict_value(state, "task_finished", "testbench_writing", True),
                 },
             )
         else:
             logger.warning(f"Testbench syntax validation failed: {validation_message}")
+
+            syntax_err = get_error_info(validation_message)
             return Command(
                 update={
-                    "messages": [AIMessage(content=f"{response_content}\n\n{save_message}\nSyntax validation: FAILED\n\
-                        {validation_message}", name="tester")],
+                    "messages": [AIMessage(content=f"{response_content}\n\n{save_message}\n\
+                        Syntax validation: FAILED\n{syntax_err}", name="tester")],
                     "testbench_code": testbench_code,
+                    "testbench_code_syntax_error": syntax_err,
                     "additional_info_needed": f"Some syntax error occurred while compiling the testbench code! Please solve this problem.",
+                    "task_finished": update_dict_value(state, "task_finished", "testbench_writing", False),
                 },
             )
     else:
         logger.warning("No testbench code found in tester response")
+        
         return Command(
             update={
                 "messages": [AIMessage(content=f"Failed to extract testbench code from response {response_content}. Please review!", name="tester")],
+                "testbench_code": "",
+                "testbench_code_syntax_error": "",
                 "additional_info_needed": f"The generated content is: {response_content}\nNo testbench code was extracted!",
+                "task_finished": update_dict_value(state, "task_finished", "testbench_writing", False),
             },
         )
 

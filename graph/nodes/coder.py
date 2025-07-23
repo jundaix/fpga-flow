@@ -1,7 +1,8 @@
-from graph.types import State
+from graph.types import State, update_dict_value
 from agents.fpga_agents import code_planner_agent, coder_agent
 from utils.verilog_extractor import extract_verilog_code
 from utils.vivado_operation import *
+from .getting_info import get_error_info
 
 from langgraph.types import Command
 from langchain_core.runnables import RunnableConfig
@@ -23,8 +24,10 @@ def code_plan_node(state: State, config: RunnableConfig) -> Command:
     Module Name: {state["module_name"]}
     Module Description: {state["module_descrption"]}
     Module Interface: {state["module_interface"]}
-    Requirement: {state["requirement"]}
-    """
+    Requirement: {state["requirements"]}
+    Timing Constraint: {state["timing_proposing"]}
+    Suggestions: {state["next_step_suggest"]}
+    """                                             # Suggestions 为操作执行建议，后续分析效果，新增了时序要求用于指导编写
 
     # 复制图状态，在复制的状态中更改 message 字段，为该节点添加特定的 message
     state_copy = copy.deepcopy(state)
@@ -51,7 +54,9 @@ def code_plan_node(state: State, config: RunnableConfig) -> Command:
 
         return Command(
             update={
-                "additional_info_needed": "Fail to generate FPGA code design",
+                # llm 未给出 response，此处不更新 message 内容
+                "additional_info_needed": "[System Error] Fail to generate FPGA code design",
+                "module_code_plan": "",
             }, 
         )
 
@@ -101,14 +106,14 @@ def code_node(state: State, config: RunnableConfig) -> Command:
                     logger.error(f"Failed to create project: {creating_information}")
                     return Command(
                         update={
-                            "additional_info_needed": f"Fail to create project: {creating_information}",
+                            "additional_info_needed": f"[System Error] Fail to create project: {creating_information}",
                         }, 
                     )
             except Exception as e:
                 logger.error(f"Failed to creat project: {e}")
                 return Command(
                     update={
-                        "additional_info_needed": f"Fail to create project: {e}",
+                        "additional_info_needed": f"[System Error] Fail to create project: {e}",
                     }, 
                 )
         else:
@@ -123,7 +128,7 @@ def code_node(state: State, config: RunnableConfig) -> Command:
             logger.error(f"Failed to create source files directory: {e}")
             return Command(
                 update={
-                    "additional_info_needed": f"Fail to create source files directory: {e}",
+                    "additional_info_needed": f"[System Error] Fail to create source files directory: {e}",
                 }, 
             )
         
@@ -138,7 +143,7 @@ def code_node(state: State, config: RunnableConfig) -> Command:
             logger.error(f"Failed to save code file: {e}")
             return Command(
                 update={
-                    "additional_info_needed": f"Fail to save the code file: {e}",
+                    "additional_info_needed": f"[System Error] Fail to save the code file: {e}",
                 }, 
             )
         
@@ -151,14 +156,14 @@ def code_node(state: State, config: RunnableConfig) -> Command:
                 logger.error(adding_message)
                 return Command(
                     update={
-                        "additional_info_needed": f"Fail to add the code file to project!\n{adding_message}",
+                        "additional_info_needed": f"[System Error] Fail to add the code file to project!\n{adding_message}",
                     }, 
                 )
         except Exception as e:
             logger.error(f"Failed to add sources to {project_name}: {e}")
             return Command(
                 update={
-                    "additional_info_needed": f"Fail to add the code file to project: {e}",
+                    "additional_info_needed": f"[System Error] Fail to add the code file to project: {e}",
                 }, 
             )
 
@@ -166,31 +171,40 @@ def code_node(state: State, config: RunnableConfig) -> Command:
         is_valid, validation_message = validate_verilog_syntax_vivado(project_name, workspace_dir, [str(code_file_path)])
         if is_valid:
             logger.info(f"{validation_message}")
+            
             return Command(
                 update={
                     "messages": [AIMessage(content=f"{response_content}\n\n{save_message}\nSyntax validation: PASSED - {validation_message}", name="coder")],
                     "module_code": generated_code,
                     "additional_info_needed": "",
-                    "task_finished.module_code_writing": True,
+                    "module_code_syntax_error": "",
+                    "task_finished": update_dict_value(state, "task_finished", "module_code_writing", True),
                 },
             )
         else:
             logger.warning(f"{validation_message}")
+
+            syntax_err = get_error_info(validation_message)
             return Command(
                 update={
-                    "messages": [AIMessage(content=f"{response_content}\n\n{save_message}\nSyntax validation: FAILED\n{validation_message}", name="coder")],
+                    "messages": [AIMessage(content=f"{response_content}\n\n{save_message}\nSyntax validation: FAILED\n{syntax_err}", name="coder")],
                     "module_code": generated_code,
-                    "module_code_syntax_error": validation_message, # (需要设计一个函数从中提取错误信息)
-                    "additional_info_needed": f"Some error occurred while compiling the RTL code! Please solve this problem.",
+                    "module_code_syntax_error": syntax_err,
+                    "additional_info_needed": f"Some syntax error occurred while compiling the RTL code! Please solve this problem.",
+                    "task_finished": update_dict_value(state, "task_finished", "module_code_writing", False),
                 },
             )
     
     else:
         logger.warning("No Verilog code found in coder response")
+
         return Command(
             update={
                 "messages": [AIMessage(content=f"Failed to extract Verilog code from response:\n{response_content} . Please check the requirements.", name="coder")],
-                "additional_info_needed": f"The generated content is: {generated_code}\nNo Verilog code was extracted!",
+                "module_code": "",
+                "module_code_syntax_error": "",
+                "additional_info_needed": f"The generated content is: {generated_code}\nNo Verilog RTL code was extracted!",
+                "task_finished": update_dict_value(state, "task_finished", "module_code_writing", False)
             },
         )
         

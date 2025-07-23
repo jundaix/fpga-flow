@@ -1,4 +1,4 @@
-from graph.types import State
+from graph.types import State, update_dict_value
 from utils.vivado_operation import *
 
 from langgraph.types import Command
@@ -8,7 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def logic_test_node(state: State) -> Command[Literal["__end__"]]:
+def logic_test_node(state: State) -> Command:
     """ 该节点专门用于逻辑测试：原本处于tester内部的逻辑测试操作移至此处 """
     logger.info("Starting logic test...")
 
@@ -17,7 +17,7 @@ def logic_test_node(state: State) -> Command[Literal["__end__"]]:
     workspace_dir = Path(__file__).parent.parent / "workspace"
     testbench_file_path = workspace_dir.joinpath(project_name, f"{project_name}.srcs", "sim_1", "new", f"tb_{module_name}")
 
-        # 先判定项目是否已经建立，则认为当前操作非法（未建立项目则不存在可以实例化的源码）
+    # 先判定项目是否已经建立，则认为当前操作非法（未建立项目则不存在可以实例化的源码）
     if not judge_project_exit(project_name, workspace_dir):
         return Command(
             update={
@@ -30,11 +30,14 @@ def logic_test_node(state: State) -> Command[Literal["__end__"]]:
 
     if logic_is_valid:
         logger.info(f"Testbench logic : {logic_validation_message}")
+
         return Command(
             update={
                 "messages": [AIMessage(content=logic_validation_message, name="logic_test")],
                 "additional_info_needed": "",
-                "task_finished.logic_test": True,
+                "logic_result": True,
+                "logic_message": logic_validation_message,
+                "task_finished": update_dict_value(state, "task_finished", "logic_test", True),
             }
         )
     else:
@@ -43,5 +46,8 @@ def logic_test_node(state: State) -> Command[Literal["__end__"]]:
             update={
                 "messages": [AIMessage(content=logic_validation_message, name="logic_test")],               # 设计函数从测试结果中提取出错误信息
                 "additional_info_needed": "Unable to pass the testbench logic verification!",
+                "logic_result": False,
+                "logic_message": logic_validation_message,
+                "task_finished": update_dict_value(state, "task_finished", "logic_test", False),
             }
         )

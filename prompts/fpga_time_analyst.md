@@ -41,6 +41,6 @@ You MUST output your analysing and proposing results in the following JSON forma
 ```json
 {
     "analysing": "Your analysing result about the timing behavior of the module",
-    "proposing": "Your proposing result about the timing behavior of the module"
+    "timing_proposing": "Your proposing result about the timing behavior of the module"
 }
 ```
