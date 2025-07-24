@@ -42,6 +42,7 @@ def load_yaml_config(file_path: str) -> Dict[str, Any]:
     """ 加载yaml配置文件，处理其中的配置信息以适用于后续处理 """
     # 如果文件不存在，返回{}
     if not os.path.exists(file_path):
+        print(f"文件不存在：{file_path}")
         return {}
 
     # 检查缓存中是否已存在配置

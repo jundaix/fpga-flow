@@ -14,7 +14,10 @@ from datetime import datetime
 
 from graph.builder import build_graph_with_memory
 from graph.types import State
+from llm_monitor import initial_langfuse_config, test_connect_2_langfuse, langfuse_callback_handler
+from llm_monitor import LangfuseServerSelection
 
+from langfuse.langchain import CallbackHandler
 
 # 配置日志
 logging.basicConfig(
@@ -59,6 +62,13 @@ class FPGAWorkflow:
         """
         运行交互式工作流程
         """
+        # 初始化 langfuse 配置，并根据连接测试结果创建 langfuse 回调处理器
+        initial_langfuse_config(LangfuseServerSelection.Local)
+        if test_connect_2_langfuse():
+            langfuse_handler = langfuse_callback_handler()
+        else:
+            langfuse_handler = None
+
         # 向用户展示工作流的内容
         print("\n" + "="*60)
         print("🚀 欢迎使用FPGA智能开发工作流程!")
@@ -94,7 +104,7 @@ class FPGAWorkflow:
         
         # 运行工作流程
         print("\n🔄 开始处理您的需求...")
-        self._run_workflow(state)       # 将拥护初始输入构成的状态输入
+        self._run_workflow(state, langfuse_handler)       # 将拥护初始输入构成的状态输入
                                 
     
     def _get_user_input(self) -> str:
@@ -107,7 +117,7 @@ class FPGAWorkflow:
         user_input = input("💡 您的需求: ").strip()
         return user_input
     
-    def _run_workflow(self, initial_state: State) -> State:
+    def _run_workflow(self, initial_state: State, langfuse_callback: CallbackHandler = None) -> State:
         """
         运行工作流程
         
@@ -118,11 +128,18 @@ class FPGAWorkflow:
             最终状态
         """
         try:
-            # 使用stream方法支持interrupt
-            config = {
-                "configurable": {"thread_id": "default"},       # 设置线程ID，标识不同线程
-                "recursion_limit": 100,                         # 递归限制，避免浪费资源
-            }
+            # 使用stream方法支持interrupt，并根据 langfuse 的连接情况添加回调处理器
+            if langfuse_callback:
+                config = {
+                    "configurable": {"thread_id": "default"},       # 设置线程ID，标识不同线程
+                    "recursion_limit": 100,                         # 递归限制，避免浪费资源
+                    "callbacks": [langfuse_callback]                # 添加 langfuse 回调器
+                }
+            else:
+                config = {
+                    "configurable": {"thread_id": "default"},       # 设置线程ID，标识不同线程
+                    "recursion_limit": 100,                         # 递归限制，避免浪费资源
+                }
             
             return self._run_stream_with_interrupts(initial_state, config)
             
