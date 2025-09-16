@@ -4,7 +4,7 @@ import subprocess
 import os
 import re
 from typing import Optional, List, Dict
- 
+
 
 def extract_verilog_code(text: str) -> Optional[str]:
     """
@@ -37,9 +37,11 @@ def extract_verilog_code(text: str) -> Optional[str]:
     return None
 
 
-def validate_verilog_syntax(file_paths, output_file=None):
+def validate_verilog_syntax(file_paths: str | List[str], output_file=None):
     """
     使用iverilog验证Verilog文件语法正确性
+        没有语法错误时什么都不返回
+        否则返回语法错误信息
     
     Args:
         file_paths: Verilog文件路径列表或单个文件路径
@@ -87,7 +89,7 @@ def validate_verilog_syntax(file_paths, output_file=None):
                 return True, f"编译成功\n{result.stdout}+{error_msg}\n输出文件: {output_file}"
         else:
             # 返回iverilog的具体错误信息
-            return False, f"iverilog错误:\n{error_msg}"
+            return False, f"iverilog判别到语法错误:\n{error_msg}"
         
     except subprocess.TimeoutExpired:
         return False, "iverilog验证超时"
@@ -185,4 +187,5 @@ def validate_verilog_logic(output_file):
         return False, f"逻辑验证过程出错: {str(e)}"
 
 
-validate_verilog_logic(r"E:\biye_over\ai_fpga_4.0\simple-fpga-flow\workspace\counter_8bit_enable_reset\sim\sim_counter_8bit_enable_reset.out")
+if __name__ == "__main__":
+    validate_verilog_logic(r"E:\biye_over\ai_fpga_4.0\simple-fpga-flow\workspace\counter_8bit_enable_reset\sim\sim_counter_8bit_enable_reset.out")

@@ -3,7 +3,7 @@
 
 # class MessagesState(TypedDict):
 #     messages: Annotated[list[AnyMessage], add_messages]
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 
 from langgraph.graph import MessagesState
 
@@ -16,7 +16,7 @@ class State(MessagesState):
     module_descrption: str = ""                         # 模块描述，根据人类的需求给出模块所实现的功能的描述
     module_interface: str = ""                          # 模块接口，根据人类的需求给出模块的输入输出端口（即Verilog的module头部信息）
     has_enough_context: bool = False                    # 指出当前的 协调者 是否从人类这里得到了充足的信息，若是自动化处理应该设定为 True
-    requirements: str = ""                               # 记录这个模块的实现要求
+    requirements: str = ""                              # 记录这个模块的实现要求
 
     timing_proposing: str = ""                          # 记录这个模块的时序特征描述（由专门的 agent 生成）
     sub_module_choose: List[Dict[str, Any]]             # 用于后续调用子模块时采用，各个调用的子模块以及其参数设置均由这个列表保存
@@ -39,6 +39,8 @@ class State(MessagesState):
     next_step: str = ""                                 # 用于保存 planner 给出的下一步的操作
     next_step_suggest: str = ""                         # 用于保存 planner 给出的下一步的建议   
 
-def update_dict_value(state:State, dict_entries: str, key: str, value: Any) -> Dict[str, Any]:
+
+def update_dict_value(state, dict_entries: str, key: str, value: Any) -> Dict[str, Any]:
     new_dict = {**state[dict_entries], key: value}
     return new_dict
+ 

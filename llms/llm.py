@@ -40,7 +40,7 @@ def get_llm_by_type(
     """
     if llm_type in _llm_cache:
         return _llm_cache[llm_type]
-    print("path:",str((Path(__file__).parent.parent)))
+    # print("path:",str((Path(__file__).parent.parent)))
     conf = load_yaml_config(
         str((Path(__file__).parent.parent / "conf.yaml").resolve())         # 加载yaml配置文件，整理其中的配置信息（返回字典）
     )

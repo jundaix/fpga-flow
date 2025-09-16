@@ -287,9 +287,9 @@ def validate_verilog_syntax_vivado(
         stderr = get_std_information(stderr_source)
 
         if "No errors or warning reported." in stdout:
-            return True, f"Syntax check PASSED!\nExecution output:\n{stdout}\nWarning messages:\n{stderr}"
+            return True, f"语法验证通过\nExecution output:\n{stdout}\nWarning messages:\n{stderr}"
         else:
-            return False, f"Syntax check FAILED!\nExecution output:\n{stdout}\nError messages:\n{stderr}"
+            return False, f"Vivado 判别到语法错误\nExecution output:\n{stdout}\nError messages:\n{stderr}"
     except Exception as e:
         return False, f"An error occurred during syntax checking with Vivado:\n{e}"
 
