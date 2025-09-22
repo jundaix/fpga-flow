@@ -81,7 +81,7 @@ def code_writing_node(state: State_coder, config: RunnableConfig) -> Command:
             """
     
     ''' 更新状态中的信息内容 '''
-    node_state["messages"] = [HumanMessage(content=request, name="code_writer")]
+    node_state["messages"] = [HumanMessage(content=request)]
     
     ''' 调用 coder_agent 生成代码 '''
     response = coder_agent.invoke(node_state, config)
@@ -175,7 +175,7 @@ def code_syntax_judge_node(state: State_coder, config: RunnableConfig) -> Comman
             """
             # 深拷贝 state ，用于保证不改变原 state，并调整其中的 message 内容
             node_state = copy.deepcopy(state)
-            node_state["messages"] = [HumanMessage(content=request, name="syntax_err_analyst")]
+            node_state["messages"] = [HumanMessage(content=request)]
             response = code_syntax_err_analyst.invoke(node_state, config)
             syntax_error_analysis = response["messages"][-1].content
             logger.info("Code syntax judge node END!")
@@ -222,7 +222,7 @@ def code_logic_judge_node(state: State_coder, config: RunnableConfig) -> Command
     implementation requirements:\n{node_state["module_requirements"]}
     code:\n{node_state["module_code"]}
     """
-    node_state["messages"] = [HumanMessage(content=request, name="code_review")]
+    node_state["messages"] = [HumanMessage(content=request)]
     # 调用模型，检查代码实现是否匹配需求以及是否存在逻辑错误
     response = code_review.invoke(node_state, config)
     code_review_result = response["messages"][-1].content

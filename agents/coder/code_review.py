@@ -29,6 +29,6 @@ code_review = create_fpga_agent(
     "code_review",
     "analyst",
     [],
-    "fpga_code_review",
+    "code_review",
     pre_hook=code_review_pre_hook,
 )

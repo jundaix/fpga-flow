@@ -6,6 +6,7 @@ from langfuse import get_client
 from langfuse.langchain import CallbackHandler
 
 from config import load_yaml_config
+from .bypass_proxy_for_localhost import bypass_proxy_for_localhost
 
 from pathlib import Path
 import logging
@@ -26,6 +27,8 @@ def initial_langfuse_config(server_selection = LangfuseServerSelection.Local) ->
     if server_selection == LangfuseServerSelection.Remote:
         langfuse_conf = conf.get("LANGFUSE", {})
     else:
+        # 调用本地 langfuse 时先设置绕过代理
+        bypass_proxy_for_localhost()
         langfuse_conf = conf.get("LANGFUSE_LOCAL", {})
 
     if not langfuse_conf:
@@ -60,3 +63,4 @@ def langfuse_callback_handler() -> CallbackHandler:
 
 if __name__ == "__main__":
     initial_langfuse_config()
+    test_connect_2_langfuse()

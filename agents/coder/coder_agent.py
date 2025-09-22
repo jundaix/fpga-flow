@@ -31,6 +31,6 @@ coder_agent = create_fpga_agent(
     "coder", 
     "coder", 
     [], 
-    "fpga_coder",
+    "code_writer",
     pre_hook=coder_agent_pre_hook
 )

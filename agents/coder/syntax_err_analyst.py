@@ -29,6 +29,6 @@ code_syntax_err_analyst = create_fpga_agent(
     "syntax_err_analys",
     "analyst",
     [],
-    "fpga_syntax_analysis",
+    "code_syntax_analysis",
     pre_hook=syntax_err_analyst_pre_hook,
 )

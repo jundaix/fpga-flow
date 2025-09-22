@@ -19,6 +19,7 @@ def _create_llm_use_conf(llm_type: LLMType, conf: Dict[str, Any]) -> ChatOpenAI:
     llm_type_map = {
         "reasoning": conf.get("REASONING_MODEL"),
         "basic": conf.get("BASIC_MODEL"),
+        "advanced": conf.get("ADVANCED_MODEL"),
         "vision": conf.get("VISION_MODEL"),
     }
     # 获得llm的配置信息并保存

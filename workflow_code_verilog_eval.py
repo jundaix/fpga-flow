@@ -164,7 +164,7 @@ class Coder_Verilogeval:
 
 if __name__ == "__main__":
     coder = Coder_Verilogeval(TaskType.spec_2_rtl, build_graph_for_verilogeval_without_memory)
-    coder.running_dataset_concurrency()
-    # coder.running_dataset_orderly()
+    # coder.running_dataset_concurrency()
+    coder.running_dataset_orderly()
     # with open("graph.png", "wb") as f:
     #     f.write(coder.graph.get_graph().draw_mermaid_png())
