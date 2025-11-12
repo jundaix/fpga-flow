@@ -2,23 +2,37 @@
 # SPDX-License-Identifier: MIT
 
 from .verilog_extractor import extract_verilog_code, validate_verilog_syntax, validate_verilog_logic
-from .vivado_operation import get_std_information, run_vivado_tcl_script_in_memory, judge_project_exit, create_project, add_files_to_project, \
+
+from .vivado_operation import get_std_information, run_vivado_tcl_script_in_memory, judge_project_exist, create_project, add_files_to_project, \
     add_sim_files_to_project, validate_verilog_syntax_vivado, contains_error, validate_verilog_logic_vivado
+
 from .analysis_json import parse_llm_json_all, parse_llm_json_first
+
+from .modelsim_operation import run_modelsim_tcl_script_in_memory, output_filter, get_err_warn_info, collect_ip_files, validate_verilog_logic_modelsim, \
+    validate_verilog_syntax_modelsim
 
 __all__ = [
     "extract_verilog_code",
     "validate_verilog_syntax",
     "validate_verilog_logic",
+    
     "get_std_information",
     "run_vivado_tcl_script_in_memory",
-    "judge_project_exit",
+    "judge_project_exist",
     "create_project",
     "add_files_to_project",
     "add_sim_files_to_project",
     "validate_verilog_syntax_vivado",
     "contains_error",
     "validate_verilog_logic_vivado", 
+
     "parse_llm_json_all", 
-    "parse_llm_json_first"
+    "parse_llm_json_first", 
+
+    "run_modelsim_tcl_script_in_memory", 
+    "output_filter", 
+    "get_err_warn_info", 
+    "collect_ip_files", 
+    "validate_verilog_logic_modelsim", 
+    "validate_verilog_syntax_modelsim", 
 ]

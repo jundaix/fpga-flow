@@ -15,6 +15,8 @@ import uuid
 
 from graph.sub_code import build_graph_code_without_memory, build_graph_code_with_memory
 from graph.sub_code import build_graph_for_verilogeval_without_memory
+from graph.sub_code import build_graph_for_verilogeval_llm_without_memory
+from graph.sub_code import build_graph_for_verilogeval_llm_with_syntax_check_without_memory
 from llm_monitor import initial_langfuse_config, test_connect_2_langfuse, langfuse_callback_handler
 from llm_monitor import LangfuseServerSelection
 
@@ -37,7 +39,7 @@ class Coder_Verilogeval:
         self.data_file_path = Path("D:/大语言模型论文/VerilogEval/Verilogeval_test_data")             # 定义测试数据集文件位置
         self.test_task = task
         self.graph = build_graph_func()                                             # 定义任务流的图
-        self.langfuse_handler = self.init_monitor()                                             # 初始化 langfuse 监视器
+        self.langfuse_handler = self.init_monitor()                                 # 初始化 langfuse 监视器
     
     def init_monitor(self):
         ''' 初始化 langfuse 配置，并根据连接测试结果创建 langfuse 回调处理器 '''
@@ -127,6 +129,11 @@ class Coder_Verilogeval:
                 f.write(f"{e}\n{tb}")
             return module_name, "error", f"{e}\n{tb}"
 
+    def run_one_special_test(self, task_name:str):
+        """ 执行专门的任务 """
+        data_file = self.data_file_path / self.test_task.value / f"{task_name}_prompt.txt"
+        return self.run_one_file(data_file)
+
     def running_dataset_concurrency(self, max_workers: int = 16):
         """
         并发运行 Verilog-eval 数据集。
@@ -163,8 +170,16 @@ class Coder_Verilogeval:
 
 
 if __name__ == "__main__":
-    coder = Coder_Verilogeval(TaskType.spec_2_rtl, build_graph_for_verilogeval_without_memory)
+    ''' 构造图用于验证 verilog-eval 数据集，可以输入不同的图构造函数用于创建不同的运行流程 '''
+    coder = Coder_Verilogeval(TaskType.spec_2_rtl, build_graph_for_verilogeval_llm_with_syntax_check_without_memory)
+
+    # ''' 执行指定的一项任务 '''
+    task_name = "Prob045_edgedetect2"
+    coder.run_one_special_test(task_name)
+
+    ''' 并发执行 '''
     # coder.running_dataset_concurrency()
-    coder.running_dataset_orderly()
-    # with open("graph.png", "wb") as f:
-    #     f.write(coder.graph.get_graph().draw_mermaid_png())
+
+    ''' 顺序执行 '''
+    # coder.running_dataset_orderly()
+

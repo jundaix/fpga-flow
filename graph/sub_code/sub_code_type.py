@@ -1,4 +1,4 @@
-from typing import List, Any
+from typing import List, Any, Dict
 from langgraph.graph import MessagesState
 from pydantic import Field
 
@@ -10,7 +10,7 @@ class State_coder(MessagesState):
     module_code: str = ""                                   # 记录 LLM 输出的当前的代码实现
 
     syntax_error_source: str = ""                           # 上一次语法错误的原始反馈信息
-    module_code_syntax_error: List[str]                     # 记录 LLM 输出的当前的代码实现中存在的语法错误，列表形式，每次记录一次错误(记录格式为错误类型 + 代码案例)
+    module_code_syntax_error: List[Dict[str, str]]          # 保存 LLM 曾经出现过的各项语法错误，每一项分别包含错误类型，错误解释，错误代码案例
     module_code_logic_error: str = ""                       # 记录 LLM 输出的当前代码实现中存在的逻辑错误
     else_error: str = ""                                    # 记录其它情况放下的错误反馈
 
@@ -23,5 +23,7 @@ class State_coder(MessagesState):
 
 
 def updata_list(state, list_entries: str, value: Any) -> List[Any]:
-    new_list = state[list_entries] + [value]
+    if not isinstance(value, list):
+        value = [value]
+    new_list = state[list_entries] + value
     return new_list

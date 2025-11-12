@@ -69,7 +69,7 @@ def run_vivado_tcl_script_in_memory(tcl_script):
     return stdout.decode(), stderr.decode()
 
 
-def judge_project_exit(project_name: str, workspace_path: str) -> bool:
+def judge_project_exist(project_name: str, workspace_path: str) -> bool:
     """
     判断项目是否存在
     Args:

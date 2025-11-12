@@ -7,6 +7,7 @@
 
 import json
 import logging
+from msilib import gen_uuid
 import os
 from pathlib import Path
 from platform import node
@@ -43,7 +44,10 @@ def code_writing_node(state: State_coder, config: RunnableConfig) -> Command:
     syntax_error = ""
     if len(node_state["module_code_syntax_error"]) > 1:
         syntax_error_list = node_state["module_code_syntax_error"][:-1]
-        syntax_error = "Some grammatical errors you need to avoid:\n" + "\n".join(syntax_error_list) if syntax_error_list else ""
+        if syntax_error_list:
+            syntax_error_str = json.dumps(syntax_error_list, ensure_ascii=False, indent=2, sort_keys=True)
+            syntax_error = "Some grammatical errors you need to AVOID:\n" + "```json\n" + syntax_error_str + "\n```"
+        
 
     ''' 根据当前运行状况调整输入要求 '''
     request = ""
@@ -88,7 +92,12 @@ def code_writing_node(state: State_coder, config: RunnableConfig) -> Command:
     response_content = response["messages"][-1].content
 
     ''' 提取生成的代码 '''
-    generated_code = extract_verilog_code(response_content)
+    is_json, json_result = parse_llm_json_first(response_content)
+    if is_json:
+        generated_code = json_result.get("verilog code", "")
+    else:
+        generated_code = ""
+
     # 提取到目的代码
     if generated_code:
         logger.info("The RTL code generated successfully!")
@@ -170,24 +179,48 @@ def code_syntax_judge_node(state: State_coder, config: RunnableConfig) -> Comman
             logger.error("Code syntax judge node: The code syntax is invalid!")
             # 由对应 agent 解析语法错误内容
             request = f"""
-            Please parse the following syntax error content and provide a clear and concise description of the error.
-            syntax error message:\n{validation_message}
+            Please parse the following syntax error content and provide a clear and concise description of the error.\
+            syntax error message:\n{validation_message}\nThe verilog code with syntax error:\n{state["module_code"]}
             """
             # 深拷贝 state ，用于保证不改变原 state，并调整其中的 message 内容
             node_state = copy.deepcopy(state)
             node_state["messages"] = [HumanMessage(content=request)]
             response = code_syntax_err_analyst.invoke(node_state, config)
-            syntax_error_analysis = response["messages"][-1].content
-            logger.info("Code syntax judge node END!")
-            return Command(
-                update={
-                    "is_syntax_error": True,
-                    "is_logic_error": False,
-                    "is_else_error": False,
-                    "syntax_error_source": validation_message,
-                    "module_code_syntax_error": updata_list(state, "module_code_syntax_error", syntax_error_analysis)
-                }
-            )
+            response_content = response["messages"][-1].content
+            is_json, syntax_err_messages = parse_llm_json_first(response_content)
+
+            # 若解析成功，则将解析结果添加到语法错误信息中
+            if is_json:
+                error_source = ""
+                new_err_list = []
+                for error in syntax_err_messages:
+                    new_err_list.append(error)
+                    error_source += f"Error type: {error.get('error_type', 'Unknown')},\nError explanation: {error.get('error_explanation', 'None')}\n\
+                        Code example:\n{error.get('error_code_example', 'None')}"
+
+                logger.info("Code syntax judge node END!")
+                return Command(
+                    update={
+                        "is_syntax_error": True,
+                        "is_logic_error": False,
+                        "is_else_error": False,
+                        "syntax_error_source": error_source,
+                        "module_code_syntax_error": updata_list(state, "module_code_syntax_error", new_err_list)
+                    }
+                )
+            
+            else:
+                logger.warning("Code syntax judge node: Failed to parse the json content from response!")
+                logger.info("Code syntax judge node END!")
+                return Command(
+                    update={
+                        "is_syntax_error": True,
+                        "is_logic_error": False,
+                        "is_else_error": False,
+                        "syntax_error_source": response_content,
+                    }
+                )
+
 
         # 否则被视为出现其它错误
         else:

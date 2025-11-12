@@ -2,7 +2,10 @@
 # SPDX-License-Identifier: MIT
 
 from langgraph.prebuilt import create_react_agent
-from typing import Optional
+from langgraph.prebuilt.chat_agent_executor import StructuredResponseSchema
+from langchain_core.runnables import RunnableLambda
+
+from typing import Optional, Union
 from langgraph.utils.runnable import RunnableLike
 
 from prompts.template import apply_prompt_template
@@ -11,7 +14,12 @@ from llms.llm import get_llm_by_type
 from config.agents import AGENT_LLM_MAP
 
 
-def create_fpga_agent(agent_name: str, agent_type: str, tools: list, prompt_template: str, pre_hook: Optional[RunnableLike] = None):
+def create_fpga_agent(agent_name: str, 
+                    agent_type: str, 
+                    tools: list, 
+                    prompt_template: str, 
+                    pre_hook: Optional[RunnableLike] = None, 
+                    response_format: Optional[Union[StructuredResponseSchema, tuple[str, StructuredResponseSchema]]] = None):
     """ 采用工厂模式创建具有一致配置的FPGA特定代理 """
     # 定义代理采用的 llm
     llm = get_llm_by_type(AGENT_LLM_MAP.get(agent_type, "basic"))           # 根据agent类型从AGENT_LLM_MAP读取llm类型（默认为basic）
@@ -25,4 +33,5 @@ def create_fpga_agent(agent_name: str, agent_type: str, tools: list, prompt_temp
         # 调用apply_prompt_template从对应的.md文件中提取模板并与state的内容进行渲染，返回结构化的信息
         # 每当Agent“要生成下一条回复”时，执行这个函数，动态地把最新的上下文带入模板里，保证系统提示（System Prompt）始终和当前对话状态同步
         pre_model_hook=pre_hook,                # 调用模型前的钩子函数，用于对输入模型的信息进行预处理
+        response_format=response_format,        # 响应格式，用于结构化输出
     )

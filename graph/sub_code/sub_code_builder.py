@@ -27,6 +27,16 @@ def _syntax_judge_route(state: State_coder):
     else:
         return "code_logic"
 
+# 用于仅检查语法错误的流程图
+def _syntax_judge_route_no_logic(state: State_coder):
+    if state["is_syntax_error"] or state["is_else_error"]:
+        if state["trying_times"] >= state["MAX_TRY_TIMES"]:
+            return "end"
+        else:
+            return "code_writer"
+    else:
+        return "end"
+
 def _logic_judge_route(state: State_coder):
     if state["is_logic_error"] or state["is_else_error"]:
         if state["trying_times"] >= state["MAX_TRY_TIMES"]:
@@ -95,10 +105,10 @@ def build_graph_code_without_memory():
     return builder.compile()
     
 
-def _build_graph_for_verilogeval():
-    '''
+'''
     构建一个适用于验证verilog-eval数据集的流程图
-    '''
+'''
+def _build_graph_for_verilogeval():
     builder = StateGraph(State_coder)
 
     builder.add_node("code_writer", code_writing_node)
@@ -137,4 +147,63 @@ def build_graph_for_verilogeval_without_memory():
     构建一个适用于验证verilog-eval数据集的流程图，该流程图不通过记忆功能
     '''
     builder = _build_graph_for_verilogeval()
+    return builder.compile()
+
+
+"""
+    构建一个适用于验证 verilog-eval 数据集的图，其中仅包含代码编写节点
+"""
+def _build_graph_for_verilogeval_llm():
+    builder = StateGraph(State_coder)
+
+    builder.add_node("code_writer", code_writing_node)
+    builder.add_node("end_saving", end_saving_node)
+
+    builder.add_edge(START, "code_writer")
+    builder.add_edge("code_writer", "end_saving")
+    builder.add_edge("end_saving", END)
+
+    return builder
+
+def build_graph_for_verilogeval_llm_without_memory():
+    """
+    构建一个适用于验证 verilog-eval 数据集的图，其中仅包含代码编写节点，且不通过记忆功能
+    """
+    builder = _build_graph_for_verilogeval_llm()
+    return builder.compile()
+
+
+"""
+    构建一个适用于验证 verilog-eval 数据集的图，其中仅包含代码编写节点和语法检查节点
+"""
+def _build_graph_for_verilogeval_llm_with_syntax_check():
+    builder = StateGraph(State_coder)
+
+    builder.add_node("code_writer", code_writing_node)
+    builder.add_node("code_syntax", code_syntax_judge_node)
+    builder.add_node("end_saving", end_saving_node)
+
+    builder.add_edge(START, "code_writer")
+    builder.add_conditional_edges("code_writer", 
+                                _code_writing_route,
+                                {
+                                    "code_writer": "code_writer",
+                                    "code_syntax": "code_syntax",
+                                    "end": "end_saving"
+                                })
+    builder.add_conditional_edges("code_syntax", 
+                                _syntax_judge_route_no_logic,
+                                {
+                                    "code_writer": "code_writer",
+                                    "end": "end_saving"
+                                })
+    builder.add_edge("end_saving", END)
+
+    return builder
+
+def build_graph_for_verilogeval_llm_with_syntax_check_without_memory():
+    """
+    构建一个适用于验证 verilog-eval 数据集的图，其中仅包含代码编写节点和语法检查节点，且不通过记忆功能
+    """
+    builder = _build_graph_for_verilogeval_llm_with_syntax_check()
     return builder.compile()

@@ -3,7 +3,7 @@
 """
 
 import json
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Optional
 
 JsonType = Union[dict, list]
 
@@ -202,7 +202,7 @@ def parse_llm_json_all(text: str) -> List[JsonType]:
                 continue
     return results
 
-def parse_llm_json_first(text: str) -> Tuple[bool, JsonType]:
+def parse_llm_json_first(text: str) -> Tuple[bool, Optional[JsonType]]:
     """
     仅返回解析到的第一个 JSON。若未找到或均解析失败则返回 (False, None)。
     """

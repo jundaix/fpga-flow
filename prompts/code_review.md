@@ -68,3 +68,15 @@ Your task is to compare the implementation requirements (text description) with 
 - Boundary condition error: using < instead of <= (or vice versa) causing off-by-one mistakes.
 - Multiple drivers: the same register assigned in two always_ff blocks.
 - Unfair arbitration: arbiter not rotating or reset to a fixed bias.
+
+## Output Format
+
+To improve processing accuracy and facilitate subsequent automated systems (not humans) in handling your response, you must provide your output in the following JSON format:
+```json
+{
+    "reason": "Your reasoning when comparing code implementations and checking for logical errors",
+    "error_explanation": "If the code has logical errors or does not meet the requirements, provide a detailed explanation of the errors and their locations. If the code is correct, this field should be empty."
+    "meet_requirements": true/false,
+}
+```
+"""
